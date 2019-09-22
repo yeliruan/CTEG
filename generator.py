@@ -679,6 +679,6 @@ if __name__ == '__main__':
     config["vocab_dict"] = np.load("./data/zhihu/word_dict_zhihu.npy").item()
     config["pretrain_wv"] = np.load("./data/zhihu/wv_tencent.npy")
     config["attention_size"] = 128
-    G = AttentionGenerator(config)
+    G = Generator(config)
     G.build_placeholder()
     G.build_graph()
