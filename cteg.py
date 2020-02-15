@@ -19,10 +19,14 @@ if __name__ == '__main__':
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     # load vocab
+    np_load_old  = np.load
+    np.load = lambda  *a, **k:np_load_old(*a,allow_pickle=True,**k)
     vocab_dict = np.load(training_config["word_dict"]).item()
     idx2word = {v: k for k, v in vocab_dict.items()}
     print(len(vocab_dict))
     config_g["vocab_dict"] = vocab_dict
+    config_g['vocab_size'] = len(vocab_dict)
+    config_d['vocab_size'] = len(vocab_dict)
     config_g["pretrain_wv"] = np.load(training_config["pretrain_wv"])
     # assert pre-train word embedding
     assert config_g["embedding_size"] == config_g["pretrain_wv"].shape[1]
@@ -30,11 +34,16 @@ if __name__ == '__main__':
     G = Generator(config_g)
     G.build_placeholder()
     G.build_graph()
-
+    #si 话题seq 270000个样例，每个样例话题数不固定
+    #sl 每个样例话题的个数
+    #slbl 对应每个样例所属的话题27000*100
+    #ti 对应每个样例目标essay
+    #tl 每个essagy的长度
+    #traim_mem 27000*120  120/len(topics) 每个topic的背景知识词id
     # prepare dataset loader
     si, sl, slbl, ti, tl, train_mem = load_npy(Config().train_data_path_zhihu)
-    g_pre_dataloader = GenDataLoader(config_g["batch_size"], si, sl, ti, tl, max_len=120, memory=train_mem)
-    g_adv_dataloader = GenDataLoader(config_g["batch_size"], si, sl, ti, tl, max_len=120, source_label=slbl,
+    g_pre_dataloader = GenDataLoader(config_g["batch_size"], si, sl, ti, tl, max_len=config_g['max_len'], memory=train_mem)
+    g_adv_dataloader = GenDataLoader(config_g["batch_size"], si, sl, ti, tl, max_len=config_g['max_len'], source_label=slbl,
                                      memory=train_mem)
 
     si_tst, sl_tst, slbl_tst, ti_tst, tl_tst, tst_mem = load_npy(Config().test_data_path_zhihu)
@@ -78,7 +87,7 @@ if __name__ == '__main__':
             f.write(log_data + "\n")
 
     # pre-train discriminator
-    d_pre_dataloader = DisDataLoader(sess, G, config_d["batch_size"], max_len=120, num_class=101,
+    d_pre_dataloader = DisDataLoader(sess, G, config_d["batch_size"], max_len=config_d['max_len'], num_class=config_d['num_class'],
                                      topic_input=si, topic_label=slbl, topic_len=sl, target_idx=ti, memory=train_mem)
     D = Discriminator(config_d)
     D.build_graph()
@@ -91,7 +100,7 @@ if __name__ == '__main__':
 
     print("Start pre-training discriminator")
     for e in range(training_config["pre_dis_epoch"]):
-        # print("preparing data ....")
+        print("preparing data ....")
         t0 = time.time()
         d_pre_dataloader.prepare_data(training_config["generate_batch"])
         # print("data generated, time cost :  %.3f s" % (time.time() - t0))
@@ -127,7 +136,7 @@ if __name__ == '__main__':
                                                                p / d_pre_dataloader.num_batch,
                                                                r / d_pre_dataloader.num_batch))
 
-    saver_d.save(sess, training_config["discriminator_path"] + "after_pre_dis")
+    # saver_d.save(sess, training_config["discriminator_path"] + "after_pre_dis")
     ############################# adversarial training ###################################
     saver_adv = tf.train.Saver(max_to_keep=10)
     saver_best = tf.train.Saver(max_to_keep=1)
@@ -139,7 +148,9 @@ if __name__ == '__main__':
     best_bleu = 0
     for adv_e in range(training_config["adv_epoch"]):
         print("adversarial epoch %d start!" % (adv_e + 1))
-        # training generator
+        # training
+
+
         for g_e in range(training_config["adv_g_epoch"]):
             g_adv_dataloader.reset_pointer()
             for b_n in range(g_adv_dataloader.num_batch):
@@ -163,6 +174,7 @@ if __name__ == '__main__':
                     f.write(log_data)
                 # evaluate every 100 step on validation dataset
                 if adv_step % 100 == 0:
+                # if adv_step % 1 == 0:
                     bleu = G.evaluate(sess, g_val_dataloader, idx2word)
                     with open("concept_mem_bleu.txt", "a+") as f:
                         f.write("adv step %d : bleu %f :\n" % (adv_step, bleu))

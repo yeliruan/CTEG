@@ -64,16 +64,38 @@ class Config(object):
         # memory
         "./data/val.mem.idx.120.concept.npy"
     ]
+    generator_config_zhihu = {
+        "embedding_size": 200,  # tencent 200 dim
+        "hidden_size": 512,
+        "max_len": 50,
+        "start_token": 0,
+        "eos_token": 1,
+        "batch_size": 64,
+        # "vocab_size": 50004,
+        "grad_norm": 10,
+        # "topic_num": 5,
+        "topic_num": 10,
+        "is_training": True,
+        "keep_prob": .5,
+        "norm_init": 0.05,
+        "normal_std": 1,
+        "learning_rate": 1e-3,
+        "beam_width": 5,
+        # "mem_num": 120,
+        "mem_num": 187,
+        "attention_size": 128
+    }
 
     discriminator_config_zhihu = {
-        "max_len": 100,  # zhihu 100
+        "max_len": 50,  # zhihu 100
         "vocab_size": 50004,
         "embedding_size": 32,
         "learning_rate": 1e-4,
         "l2_reg_lambda": 0.0,
         "batch_size": 256,
-        "topic_num": 5,
-        "n_class": 101,  # zhihu 101
+        # "topic_num": 5,
+        "topic_num": 10,
+        "n_class": 4653,  # zhihu 101 8350
         # random setting, may need fine-tune
         "filter_sizes": [1, 2, 3, 4, 5, 10, 20, 50, 100],
         "num_filters": [128, 256, 256, 256, 256, 128, 128, 128, 256],
@@ -113,22 +135,3 @@ class Config(object):
 
     }
 
-    generator_config_zhihu = {
-        "embedding_size": 200,  # tencent 200 dim
-        "hidden_size": 512,
-        "max_len": 100,
-        "start_token": 0,
-        "eos_token": 1,
-        "batch_size": 64,
-        "vocab_size": 50004,
-        "grad_norm": 10,
-        "topic_num": 5,
-        "is_training": True,
-        "keep_prob": .5,
-        "norm_init": 0.05,
-        "normal_std": 1,
-        "learning_rate": 1e-3,
-        "beam_width": 5,
-        "mem_num": 120,
-        "attention_size": 128
-    }

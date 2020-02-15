@@ -23,7 +23,7 @@ class Generator:
 
         self.vocab_size = config["vocab_size"]
         self.vocab_dict = config["vocab_dict"]
-        self.vocab_size = 50000 + 4  # GO EOS UNK PAD
+        # self.vocab_size = 50000 + 4  # GO EOS UNK PAD
         # len(self.vocab_dict)
 
         self.grad_norm = config["grad_norm"]
@@ -594,7 +594,10 @@ class Generator:
             ans[i][0] = go_id
             jj = min(len(x[i]), self.max_len - 2)
             for j in range(jj):
-                ans[i][j + 1] = x[i][j]
+                try:
+                    ans[i][j + 1] = x[i][j]
+                except:
+                    print(x[i])
             ans[i][jj + 1] = end_id
             ans_lengths.append(jj + 2)
         return ans, ans_lengths
@@ -664,7 +667,9 @@ class Generator:
         for w, h in zip(tw, test_samples):
             refers = self.refers[w]
             if len(refers) == 0:
-                raise Exception("Error")
+                # raise Exception("Error")
+                print("Key not found error:"+w)
+                continue
             total_bleu += sentence_bleu(refers, h, weights=(0, 1, 0, 0), smoothing_function=self.sm.method1)
 
         if not get_ret:
@@ -674,11 +679,11 @@ class Generator:
         # return total_bleu / dataloader.num_batch
 
 
-if __name__ == '__main__':
-    config = Config().generator_config_zhihu
-    config["vocab_dict"] = np.load("./data/zhihu/word_dict_zhihu.npy").item()
-    config["pretrain_wv"] = np.load("./data/zhihu/wv_tencent.npy")
-    config["attention_size"] = 128
-    G = Generator(config)
-    G.build_placeholder()
-    G.build_graph()
+# if __name__ == '__main__':
+    # config = Config().generator_config_zhihu
+    # config["vocab_dict"] = np.load("./data/zhihu/word_dict_zhihu.npy").item()
+    # config["pretrain_wv"] = np.load("./data/zhihu/wv_tencent.npy")
+    # config["attention_size"] = 128
+    # G = AttentionGenerator(config)
+    # G.build_placeholder()
+    # G.build_graph()
