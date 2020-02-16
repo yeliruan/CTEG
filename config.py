@@ -97,8 +97,8 @@ class Config(object):
         "topic_num": 10,
         "n_class": 4653,  # zhihu 101 8350
         # random setting, may need fine-tune
-        "filter_sizes": [1, 2, 3, 4, 5, 10, 20, 50, 100],
-        "num_filters": [128, 256, 256, 256, 256, 128, 128, 128, 256],
+        "filter_sizes": [1, 2, 3, 4, 5, 10, 20, 50],
+        "num_filters": [128, 256, 256, 256, 256, 128, 128, 128],
         "label_smooth": 0.9
     }
 
