@@ -67,6 +67,7 @@ if __name__ == '__main__':
     best_bleu = 0.0
     print("Start pre-training generator")
     for e in range(1, training_config["pre_gen_epoch"] + 1):
+        t0 = time.time()
         avg_loss = 0
         for _ in range(g_pre_dataloader.num_batch):
             total_step += 1
@@ -74,20 +75,21 @@ if __name__ == '__main__':
             pre_g_loss = G.run_pretrain_step(sess, batch)
             avg_loss += pre_g_loss
             if e >= 10 and total_step % 500 == 0:
-                bleu = G.evaluate(sess, g_test_dataloader, idx2word)
+                bleu = G.evaluate(sess, g_val_dataloader, idx2word)
                 if bleu > best_bleu:
-                    with open(log_file, "a+") as f:
-                        f.write("step : %d bleu : %f \n " % (total_step, bleu))
+                    print("step : %d bleu : %f \n " % (total_step, bleu))
+                    # with open(log_file, "a+") as f:
+                    #     f.write("step : %d bleu : %f \n " % (total_step, bleu))
                     best_bleu = bleu
                     saver_g.save(sess, training_config["generator_path"] + "generator-" + str(total_step))
 
         log_data = "epoch: %d average training loss: %.4f" % (e, avg_loss / g_pre_dataloader.num_batch)
         print(log_data)
-        with open(log_file, "a+") as f:
-            f.write(log_data + "\n")
-
+        # with open(log_file, "a+") as f:
+        #     f.write(log_data + "\n")
+        print("pre-training generator epoch%d time cost :  %.3f s" % (e,time.time() - t0))
     # pre-train discriminator
-    d_pre_dataloader = DisDataLoader(sess, G, config_d["batch_size"], max_len=config_d['max_len'], num_class=config_d['num_class'],
+    d_pre_dataloader = DisDataLoader(sess, G, config_d["batch_size"], max_len=config_d['max_len'], num_class=config_d['n_class'],
                                      topic_input=si, topic_label=slbl, topic_len=sl, target_idx=ti, memory=train_mem)
     D = Discriminator(config_d)
     D.build_graph()
@@ -105,6 +107,7 @@ if __name__ == '__main__':
         d_pre_dataloader.prepare_data(training_config["generate_batch"])
         # print("data generated, time cost :  %.3f s" % (time.time() - t0))
         for rt in range(training_config["repeat_time"]):
+            t1 = time.time()
             true_data_loss, true_data_acc, true_data_hl = 0, 0, 0
             fake_data_loss, fake_data_acc, fake_data_hl = 0, 0, 0
             p, r, f1 = 0, 0, 0
@@ -135,6 +138,9 @@ if __name__ == '__main__':
             print("Micro-F1: %f  Precision: %f  Recall: %f" % (f1 / d_pre_dataloader.num_batch,
                                                                p / d_pre_dataloader.num_batch,
                                                                r / d_pre_dataloader.num_batch))
+            print("pre-training discriminator epoch%d repeat-time%d time cost :  %.3f s" % (e,rt,time.time() - t1))
+
+        print("pre-training discriminator epoch%d time cost :  %.3f s" % (e,time.time() - t0))
 
     # saver_d.save(sess, training_config["discriminator_path"] + "after_pre_dis")
     ############################# adversarial training ###################################
@@ -149,9 +155,10 @@ if __name__ == '__main__':
     for adv_e in range(training_config["adv_epoch"]):
         print("adversarial epoch %d start!" % (adv_e + 1))
         # training
-
+        t0 = time.time()
 
         for g_e in range(training_config["adv_g_epoch"]):
+            t1 = time.time()
             g_adv_dataloader.reset_pointer()
             for b_n in range(g_adv_dataloader.num_batch):
                 adv_step += 1
@@ -184,17 +191,24 @@ if __name__ == '__main__':
                     if bleu > best_bleu:
                         best_bleu = bleu
                         saver_best.save(sess, best_path + ("%.3f" % (100 * best_bleu)))
+            print("adv-training epoch%d generator epoch%d time cost :  %.3f s" % (adv_e,g_e, time.time() - t1))
 
         # discriminator epoch
         for d_e in range(training_config["adv_d_epoch"]):
+            t2 = time.time()
             print("preparing data.....")
             d_pre_dataloader.prepare_data(training_config["generate_batch"])
             # print("data generated, time cost :  %.3f s" % (time.time() - t0))
             for rt in range(training_config["repeat_time"]):
+                t3 = time.time()
                 for _ in range(d_pre_dataloader.num_batch):
                     batch_x, batch_y = d_pre_dataloader.next_batch()
                     update, d_pre_loss, d_acc, d_hl = D.run_train_epoch(sess, batch_x, batch_y)
+                print("adv-training epoch%d discriminator epoch%d repeat-time%d time cost :  %.3f s" % (adv_e,d_e,rt, time.time() - t3))
             print("pretrain discriminator loss: %.4f accuracy : %.3f hamming loss : %.4f" % (
                 d_pre_loss, d_acc, d_hl))
+            print("adv-training epoch%d discriminator epoch%d time cost :  %.3f s" % (adv_e,d_e, time.time() - t2))
+
+        print("adv-training epoch%d time cost :  %.3f s" % (adv_e, time.time() - t0))
 
     print("Training finished")
