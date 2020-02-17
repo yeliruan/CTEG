@@ -177,13 +177,13 @@ if __name__ == '__main__':
                 mle_loss = G.run_pretrain_step(sess, mle_batch)
                 log_data += "mle loss: %f \n" % mle_loss
 
-                with open("concept_mem_adv_log.txt", "a+") as f:
+                with open("concept_mem_log.txt", "a+") as f:
                     f.write(log_data)
                 # evaluate every 100 step on validation dataset
                 if adv_step % 100 == 0:
                 # if adv_step % 1 == 0:
                     bleu = G.evaluate(sess, g_val_dataloader, idx2word)
-                    with open("concept_mem_bleu.txt", "a+") as f:
+                    with open("concept_mem_bleu_adv.txt", "a+") as f:
                         f.write("adv step %d : bleu %f :\n" % (adv_step, bleu))
                     model_path = training_config["adv_path"] + "adv-" + str(adv_step)
                     print("saving to ", model_path)
